@@ -1,0 +1,4 @@
+--models
+--position bottom
+--show-foreign-keys
+--show-indexes
