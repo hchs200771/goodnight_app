@@ -113,4 +113,85 @@ RSpec.describe Api::V1::FollowRelationshipsController, type: :request do
       end
     end
   end
+
+  describe 'DELETE /api/v1/users/:follower_id/follow_relationships/:id' do
+    context 'when user exists' do
+      context 'when unfollowing a followed user' do
+        before do
+          user.follow(other_user)
+        end
+
+        it 'removes the follow relationship' do
+          expect {
+            delete "/api/v1/users/#{user.id}/follow_relationships/#{other_user.id}"
+          }.to change { user.following.count }.by(-1)
+        end
+
+        it 'returns success response' do
+          delete "/api/v1/users/#{user.id}/follow_relationships/#{other_user.id}"
+
+          expect(response).to have_http_status(:ok)
+          expect(parsed_response_body).to match(
+            'message' => '取消追蹤成功',
+            'unfollowed_user' => {
+              'id' => other_user.id,
+              'name' => other_user.name
+            }
+          )
+        end
+
+        it 'updates following status' do
+          delete "/api/v1/users/#{user.id}/follow_relationships/#{other_user.id}"
+
+          expect(user.reload.following?(other_user)).to be false
+        end
+      end
+
+      context 'when trying to unfollow a non-followed user' do
+        it 'returns error' do
+          delete "/api/v1/users/#{user.id}/follow_relationships/#{other_user.id}"
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(parsed_response_body).to eq(
+            'error' => '沒有追蹤此使用者，無法取消追蹤'
+          )
+        end
+
+        it 'does not change follow relationships count' do
+          expect {
+            delete "/api/v1/users/#{user.id}/follow_relationships/#{other_user.id}"
+          }.not_to change { user.following.count }
+        end
+      end
+
+      context 'when trying to unfollow non-existent user' do
+        it 'returns not found error' do
+          delete "/api/v1/users/#{user.id}/follow_relationships/99999"
+
+          expect(response).to have_http_status(:not_found)
+          expect(parsed_response_body).to eq(
+            'error' => '要取消追蹤的使用者不存在'
+          )
+        end
+
+        it 'does not change follow relationships count' do
+          expect {
+            delete "/api/v1/users/#{user.id}/follow_relationships/99999"
+          }.not_to change { user.following.count }
+        end
+      end
+    end
+
+    context 'when user does not exist' do
+      it 'returns not found error' do
+        delete "/api/v1/users/99999/follow_relationships/#{other_user.id}"
+
+        expect(response).to have_http_status(:not_found)
+        expect(parsed_response_body).to eq(
+          'error' => '使用者不存在',
+          'details' => '找不到 ID 為 99999 的使用者'
+        )
+      end
+    end
+  end
 end

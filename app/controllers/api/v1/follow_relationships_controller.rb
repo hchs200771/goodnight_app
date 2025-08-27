@@ -56,6 +56,47 @@ module Api
         end
       end
 
+      # DELETE /api/v1/users/:follower_id/follow_relationships/:id
+      def destroy
+        followed_id = params[:id]
+
+        # 檢查要取消追蹤的使用者是否存在
+        begin
+          followed_user = User.find(followed_id)
+        rescue ActiveRecord::RecordNotFound
+          render json: {
+            error: '要取消追蹤的使用者不存在'
+          }, status: :not_found
+          return
+        end
+
+        # 檢查是否正在追蹤該使用者
+        unless @user.following?(followed_user)
+          render json: {
+            error: '沒有追蹤此使用者，無法取消追蹤'
+          }, status: :unprocessable_entity
+          return
+        end
+
+        # 取消追蹤
+        follow_relationship = @user.following_relationships.find_by(followed: followed_user)
+
+        if follow_relationship.destroy
+          render json: {
+            message: '取消追蹤成功',
+            unfollowed_user: {
+              id: followed_user.id,
+              name: followed_user.name
+            }
+          }, status: :ok
+        else
+          render json: {
+            error: '取消追蹤失敗',
+            errors: follow_relationship.errors.full_messages
+          }, status: :unprocessable_entity
+        end
+      end
+
       private
 
       def set_user

@@ -21,7 +21,7 @@ Rails.application.routes.draw do
         end
 
         # Follow Relationships API
-        resources :follow_relationships, only: [:create]
+        resources :follow_relationships, only: [:create, :destroy]
       end
     end
   end
