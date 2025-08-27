@@ -19,6 +19,9 @@ Rails.application.routes.draw do
             patch :wake_up
           end
         end
+
+        # Follow Relationships API
+        resources :follow_relationships, only: [:create]
       end
     end
   end
