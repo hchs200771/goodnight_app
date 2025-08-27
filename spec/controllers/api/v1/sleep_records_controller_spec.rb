@@ -313,8 +313,100 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
 
         # 檢查是否包含所有朋友的睡眠紀錄
         records = parsed_response_body['friends_sleep_records']
-        record_ids = records.map { |r| r['id'] }
-        expect(record_ids).to eq([@friend2_record.id, @friend1_record1.id, @friend1_record2.id])
+        expect(records.map { |r| r['id'] }).to eq([@friend2_record.id, @friend1_record1.id, @friend1_record2.id])
+      end
+
+      it 'supports pagination with page 1 and per_page 2' do
+        get "/api/v1/users/#{user.id}/sleep_records/friends_sleep_feed?page=1&per_page=2"
+
+        expect(response).to have_http_status(:ok)
+
+        # 檢查基本結構
+        expect(parsed_response_body['user_id']).to eq(user.id)
+        expect(parsed_response_body['user_name']).to eq(user.name)
+        expect(parsed_response_body['total_records']).to eq(2)  # 每頁 2 筆
+        expect(parsed_response_body['friends_sleep_records']).to have_attributes(length: 2)
+
+        # 檢查分頁資訊
+        expect(parsed_response_body['pagination']).to include(
+          'current_page' => 1,
+          'per_page' => 2,
+          'total_count' => 3,  # 總數仍然是 3
+          'total_pages' => 2,  # 總頁數：3/2 = 2 頁
+          'has_next_page' => true,   # 有下一頁
+          'has_prev_page' => false   # 第一頁沒有上一頁
+        )
+
+        # 檢查第一頁的資料（應該是前 2 筆，按睡眠時長降序）
+        records = parsed_response_body['friends_sleep_records']
+
+        # 第一筆應該是最長睡眠時間（32400 秒）
+        # 第二筆應該是第二長睡眠時間（28800 秒）
+        durations = records.map { |r| r['duration_in_seconds'] }
+        expect(durations).to eq([32400, 28800])
+      end
+
+      it 'supports pagination with page 2 and per_page 2' do
+        get "/api/v1/users/#{user.id}/sleep_records/friends_sleep_feed?page=2&per_page=2"
+
+        expect(response).to have_http_status(:ok)
+
+        # 檢查基本結構
+        expect(parsed_response_body['user_id']).to eq(user.id)
+        expect(parsed_response_body['user_name']).to eq(user.name)
+        expect(parsed_response_body['total_records']).to eq(1)  # 第二頁只有 1 筆
+        expect(parsed_response_body['friends_sleep_records']).to have_attributes(length: 1)
+
+        # 檢查分頁資訊
+        expect(parsed_response_body['pagination']).to include(
+          'current_page' => 2,
+          'per_page' => 2,
+          'total_count' => 3,  # 總數仍然是 3
+          'total_pages' => 2,  # 總頁數：3/2 = 2 頁
+          'has_next_page' => false,  # 最後一頁沒有下一頁
+          'has_prev_page' => true    # 第二頁有上一頁
+        )
+
+        # 檢查第二頁的資料（應該是最後 1 筆）
+        durations = parsed_response_body['friends_sleep_records'].map { |r| r['duration_in_seconds'] }
+        expect(durations).to eq([25200])
+      end
+
+      it 'handles pagination edge cases correctly' do
+        # 測試超出範圍的頁碼
+        get "/api/v1/users/#{user.id}/sleep_records/friends_sleep_feed?page=3&per_page=2"
+
+        expect(response).to have_http_status(:ok)
+
+        # 檢查基本結構
+        expect(parsed_response_body['user_id']).to eq(user.id)
+        expect(parsed_response_body['user_name']).to eq(user.name)
+        expect(parsed_response_body['total_records']).to eq(0)  # 超出範圍，沒有資料
+        expect(parsed_response_body['friends_sleep_records']).to eq([])
+
+        # 檢查分頁資訊（超出範圍時，total_count 和 total_pages 保持正確）
+        expect(parsed_response_body['pagination']).to include(
+          'current_page' => 3,
+          'per_page' => 2,
+          'total_count' => 3,  # 總數保持正確
+          'total_pages' => 2,  # 總頁數：3/2 = 2 頁
+          'has_next_page' => false,  # 沒有下一頁
+          'has_prev_page' => true    # 有上一頁
+        )
+
+        # 測試每頁 1 筆的情況
+        get "/api/v1/users/#{user.id}/sleep_records/friends_sleep_feed?page=1&per_page=1"
+
+        expect(response).to have_http_status(:ok)
+        expect(parsed_response_body['total_records']).to eq(1)
+        expect(parsed_response_body['pagination']).to include(
+          'current_page' => 1,
+          'per_page' => 1,
+          'total_count' => 3,
+          'total_pages' => 3,  # 總頁數：3/1 = 3 頁
+          'has_next_page' => true,
+          'has_prev_page' => false
+        )
       end
 
       it 'orders records by duration_in_seconds in descending order' do
@@ -328,7 +420,6 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
 
         # 檢查具體的排序結果
         expect(durations).to eq([32400, 28800, 25200])
-        expect(durations[0]).to eq(32400) # 最長睡眠時間應該在第一個
       end
 
       it 'excludes non-friend sleep records' do

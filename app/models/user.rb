@@ -24,7 +24,8 @@ class User < ApplicationRecord
   end
 
   def following?(user)
-    following.include?(user)
+    # 使用 exists? 避免載入整個關聯
+    following_relationships.exists?(followed: user)
   end
 
   def sleep_records_with_duration

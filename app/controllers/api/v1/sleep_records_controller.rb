@@ -113,28 +113,45 @@ module Api
         page = (params[:page] || 1).to_i
         per_page = [(params[:per_page] || 20).to_i, 100].min # 限制最大每頁100筆
 
-        with_read_replica do
-          @friends_sleep_records = SleepRecord.friends_sleep_feed(
-            follower_id: @user.id,
-            start_date: 1.week.ago.beginning_of_week,
-            end_date: 1.week.ago.end_of_week,
-            page: page,
-            per_page: per_page
-          )
+        # 支援自訂日期範圍，預設為上週
+        start_date = params[:start_date]&.to_date || 1.week.ago.beginning_of_week
+        end_date = params[:end_date]&.to_date || 1.week.ago.end_of_week
 
+        # 驗證日期範圍
+        unless validate_date_range(start_date, end_date)
+          return
+        end
+
+        with_read_replica do
+          # 先取得總數（不分頁）
           @total_count = SleepRecord.friends_sleep_feed(
             follower_id: @user.id,
-            start_date: 1.week.ago.beginning_of_week,
-            end_date: 1.week.ago.end_of_week
+            start_date: start_date,
+            end_date: end_date
           ).count
+
+          # 如果總數為 0 或頁碼超出範圍，直接回傳空結果
+          total_pages = (@total_count.to_f / per_page).ceil
+          if @total_count == 0 || page > total_pages
+            @friends_sleep_records = []
+          else
+            # 再取得分頁資料
+            @friends_sleep_records = SleepRecord.friends_sleep_feed(
+              follower_id: @user.id,
+              start_date: start_date,
+              end_date: end_date,
+              page: page,
+              per_page: per_page
+            )
+          end
         end
 
         render json: {
           user_id: @user.id,
           user_name: @user.name,
           time_range: {
-            start_date: 1.week.ago.beginning_of_week,
-            end_date: 1.week.ago.end_of_week
+            start_date: start_date,
+            end_date: end_date
           },
           pagination: {
             current_page: page,
@@ -172,6 +189,21 @@ module Api
           details: "找不到 ID 為 #{params[:user_id]} 的使用者"
         }, status: :not_found
         return
+      end
+
+      def validate_date_range(start_date, end_date)
+        if start_date >= end_date
+          render json: { error: '開始日期必須早於結束日期' }, status: :bad_request
+          return false
+        end
+
+        # 限制查詢時間範圍（例如：最多查詢 1 年）
+        if (end_date - start_date) > 1.year
+          render json: { error: '查詢時間範圍不能超過 1 年' }, status: :bad_request
+          return false
+        end
+
+        true
       end
     end
   end

@@ -31,7 +31,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_26_090833) do
     t.integer "duration_in_seconds", comment: "睡眠時長（秒）"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["bed_time"], name: "index_sleep_records_on_bed_time"
+    t.index ["created_at"], name: "index_sleep_records_on_created_at"
     t.index ["duration_in_seconds"], name: "index_sleep_records_on_duration_in_seconds"
     t.index ["user_id"], name: "index_sleep_records_on_user_id"
   end

@@ -10,8 +10,8 @@ class SleepRecord < ApplicationRecord
   before_validation :calculate_duration, if: :wake_up_time_changed?
 
   # Scopes
-  scope :completed, -> { where.not(wake_up_time: nil) }
-  scope :ongoing, -> { where(wake_up_time: nil) }
+  scope :completed, -> { where.not(duration_in_seconds: nil) }
+  scope :ongoing, -> { where(duration_in_seconds: nil) }
   scope :by_duration, -> { completed.order(duration_in_seconds: :desc) }
   scope :recent, -> { order(created_at: :desc) }
 
