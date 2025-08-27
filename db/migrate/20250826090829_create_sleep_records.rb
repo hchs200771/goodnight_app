@@ -16,8 +16,8 @@ class CreateSleepRecords < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    # 為上床時間建立索引，支援時間範圍查詢（朋友睡眠牆：上週以來）
-    add_index :sleep_records, :bed_time
+    # 為建立時間建立索引，支援時間範圍查詢
+    add_index :sleep_records, :created_at
 
     # 為睡眠時長建立索引，支援排序查詢（朋友睡眠牆：按睡眠時長降序）
     add_index :sleep_records, :duration_in_seconds

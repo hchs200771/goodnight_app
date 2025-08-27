@@ -4,6 +4,7 @@ module Api
       include ReadReplica
 
       before_action :set_user
+      rescue_from ArgumentError, with: :bad_request
 
       # POST /api/v1/users/:user_id/sleep_records/clock_in
       def clock_in
@@ -105,6 +106,60 @@ module Api
             errors: @current_sleep_record.errors.full_messages
           }, status: :unprocessable_entity
         end
+      end
+
+      # GET /api/v1/users/:user_id/sleep_records/friends_sleep_feed
+      def friends_sleep_feed
+        page = (params[:page] || 1).to_i
+        per_page = [(params[:per_page] || 20).to_i, 100].min # 限制最大每頁100筆
+
+        with_read_replica do
+          @friends_sleep_records = SleepRecord.friends_sleep_feed(
+            follower_id: @user.id,
+            start_date: 1.week.ago.beginning_of_week,
+            end_date: 1.week.ago.end_of_week,
+            page: page,
+            per_page: per_page
+          )
+
+          @total_count = SleepRecord.friends_sleep_feed(
+            follower_id: @user.id,
+            start_date: 1.week.ago.beginning_of_week,
+            end_date: 1.week.ago.end_of_week
+          ).count
+        end
+
+        render json: {
+          user_id: @user.id,
+          user_name: @user.name,
+          time_range: {
+            start_date: 1.week.ago.beginning_of_week,
+            end_date: 1.week.ago.end_of_week
+          },
+          pagination: {
+            current_page: page,
+            per_page: per_page,
+            total_count: @total_count,
+            total_pages: (@total_count.to_f / per_page).ceil,
+            has_next_page: page < (@total_count.to_f / per_page).ceil,
+            has_prev_page: page > 1
+          },
+          total_records: @friends_sleep_records.count,
+          friends_sleep_records: @friends_sleep_records.map do |record|
+            {
+              id: record.id,
+              user: {
+                id: record.user_id,
+                name: record.user.name
+              },
+              bed_time: record.bed_time,
+              wake_up_time: record.wake_up_time,
+              duration_in_seconds: record.duration_in_seconds,
+              duration_in_hours: record.duration_in_hours,
+              created_at: record.created_at
+            }
+          end
+        }
       end
 
       private

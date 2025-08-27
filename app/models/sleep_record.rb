@@ -15,6 +15,48 @@ class SleepRecord < ApplicationRecord
   scope :by_duration, -> { completed.order(duration_in_seconds: :desc) }
   scope :recent, -> { order(created_at: :desc) }
 
+  # Class Methods
+  # 朋友睡眠紀錄查詢 - 使用分步驟查詢優化效能
+  def self.friends_sleep_feed(follower_id:, start_date: nil, end_date: nil, page: nil, per_page: nil)
+    # 設定預設時間範圍
+    start_date ||= 1.week.ago.beginning_of_week
+    end_date ||= 1.week.ago.end_of_week
+
+    # 參數驗證
+    validate_friends_sleep_feed_params(follower_id, start_date, end_date)
+
+    # 步驟 1: 先篩選出要追蹤的使用者 ID
+    followed_user_ids = FollowRelationship
+      .where(follower_id: follower_id)
+      .pluck(:followed_id)
+
+    return [] if followed_user_ids.empty?
+
+    # 步驟 2: 再查詢這些使用者的睡眠紀錄
+    query = completed
+      .where(user_id: followed_user_ids)
+      .where(created_at: start_date..end_date)
+      .includes(:user)
+      .by_duration
+
+    # 步驟 3: 加入分頁（如果提供分頁參數）
+    if page && per_page
+      query = query.offset((page - 1) * per_page).limit(per_page)
+    end
+
+    query
+  end
+
+  # 私有方法：參數驗證
+  def self.validate_friends_sleep_feed_params(follower_id, start_date, end_date)
+    raise ArgumentError, 'follower_id is required' if follower_id.blank?
+    raise ArgumentError, 'start_date must be a Date/Time' unless start_date.is_a?(Date) || start_date.is_a?(Time)
+    raise ArgumentError, 'end_date must be a Date/Time' unless end_date.is_a?(Date) || end_date.is_a?(Time)
+    raise ArgumentError, 'start_date must be before end_date' if start_date >= end_date
+  end
+
+  private_class_method :validate_friends_sleep_feed_params
+
   # Instance methods
   def duration_in_hours
     return nil unless duration_in_seconds

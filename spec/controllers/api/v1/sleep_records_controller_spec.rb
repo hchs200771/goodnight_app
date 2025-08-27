@@ -246,4 +246,163 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
       end
     end
   end
+
+  describe 'GET /api/v1/users/:user_id/sleep_records/friends_sleep_feed' do
+    let(:friend1) { create(:user) }
+    let(:friend2) { create(:user) }
+    let(:non_friend) { create(:user) }
+
+    before do
+      # 建立追蹤關係
+      user.follow(friend1)
+      user.follow(friend2)
+
+      # 建立上週的睡眠紀錄
+      travel_to(1.week.ago + 1.day) do
+        # 使用 build + save 來避免回調覆蓋 duration_in_seconds
+        @friend2_record = build(:sleep_record, user: friend2, bed_time: 9.hours.ago, wake_up_time: Time.current)
+        @friend2_record.duration_in_seconds = 32400 # 9小時
+        @friend2_record.save!
+
+        @friend1_record1 = build(:sleep_record, user: friend1, bed_time: 8.hours.ago, wake_up_time: Time.current)
+        @friend1_record1.duration_in_seconds = 28800 # 8小時
+        @friend1_record1.save!
+
+        @friend1_record2 = build(:sleep_record, user: friend1, bed_time: 7.hours.ago, wake_up_time: Time.current)
+        @friend1_record2.duration_in_seconds = 25200 # 7小時
+        @friend1_record2.save!
+
+        @non_friend_record = build(:sleep_record, user: non_friend, bed_time: 10.hours.ago, wake_up_time: Time.current)
+        @non_friend_record.duration_in_seconds = 36000 # 10小時
+        @non_friend_record.save!
+      end
+
+      # 建立本週的睡眠紀錄（不應該出現在結果中）
+      travel_to(Time.current) do
+        @current_week_record = create(:sleep_record, :completed, user: friend1, duration_in_seconds: 30000)
+      end
+    end
+
+    context 'when user has friends with sleep records' do
+      it 'returns friends sleep records from last week' do
+        get "/api/v1/users/#{user.id}/sleep_records/friends_sleep_feed"
+
+        expect(response).to have_http_status(:ok)
+
+        # 檢查基本結構
+        expect(parsed_response_body['user_id']).to eq(user.id)
+        expect(parsed_response_body['user_name']).to eq(user.name)
+        expect(parsed_response_body['total_records']).to eq(3)
+        expect(parsed_response_body['friends_sleep_records']).to have_attributes(length: 3)
+
+        # 檢查時間範圍
+        expect(parsed_response_body['time_range']).to include(
+          'start_date' => be_present,
+          'end_date' => be_present
+        )
+
+        # 檢查分頁資訊
+        expect(parsed_response_body['pagination']).to include(
+          'current_page' => 1,
+          'per_page' => 20,
+          'total_count' => 3,
+          'total_pages' => 1,
+          'has_next_page' => false,
+          'has_prev_page' => false
+        )
+
+        # 檢查是否包含所有朋友的睡眠紀錄
+        records = parsed_response_body['friends_sleep_records']
+        record_ids = records.map { |r| r['id'] }
+        expect(record_ids).to eq([@friend2_record.id, @friend1_record1.id, @friend1_record2.id])
+      end
+
+      it 'orders records by duration_in_seconds in descending order' do
+        get "/api/v1/users/#{user.id}/sleep_records/friends_sleep_feed"
+
+        records = parsed_response_body['friends_sleep_records']
+        expect(records.length).to eq(3)
+
+        # 檢查排序：應該按照 duration_in_seconds 降序排列
+        durations = records.map { |r| r['duration_in_seconds'] }
+
+        # 檢查具體的排序結果
+        expect(durations).to eq([32400, 28800, 25200])
+        expect(durations[0]).to eq(32400) # 最長睡眠時間應該在第一個
+      end
+
+      it 'excludes non-friend sleep records' do
+        get "/api/v1/users/#{user.id}/sleep_records/friends_sleep_feed"
+
+        records = parsed_response_body['friends_sleep_records']
+        record_ids = records.map { |r| r['id'] }
+
+        expect(record_ids).not_to include(@non_friend_record.id)
+      end
+
+      it 'excludes current week sleep records' do
+        get "/api/v1/users/#{user.id}/sleep_records/friends_sleep_feed"
+
+        records = parsed_response_body['friends_sleep_records']
+        record_ids = records.map { |r| r['id'] }
+
+        expect(record_ids).not_to include(@current_week_record.id)
+      end
+
+      it 'only includes completed sleep records' do
+        # 建立一筆進行中的睡眠紀錄
+        travel_to(1.week.ago + 1.day) do
+          create(:sleep_record, :ongoing, user: friend1)
+        end
+
+        get "/api/v1/users/#{user.id}/sleep_records/friends_sleep_feed"
+
+        records = parsed_response_body['friends_sleep_records']
+        expect(records.length).to eq(3) # 仍然是3筆，不包括進行中的
+      end
+    end
+
+    context 'when user has no friends' do
+      let(:lonely_user) { create(:user) }
+
+      it 'returns empty list' do
+        get "/api/v1/users/#{lonely_user.id}/sleep_records/friends_sleep_feed"
+
+        expect(response).to have_http_status(:ok)
+        # 檢查基本結構
+        expect(parsed_response_body['user_id']).to eq(lonely_user.id)
+        expect(parsed_response_body['user_name']).to eq(lonely_user.name)
+        expect(parsed_response_body['total_records']).to eq(0)
+        expect(parsed_response_body['friends_sleep_records']).to eq([])
+
+        # 檢查時間範圍
+        expect(parsed_response_body['time_range']).to include(
+          'start_date' => be_present,
+          'end_date' => be_present
+        )
+
+        # 檢查分頁資訊
+        expect(parsed_response_body['pagination']).to include(
+          'current_page' => 1,
+          'per_page' => 20,
+          'total_count' => 0,
+          'total_pages' => 0,
+          'has_next_page' => false,
+          'has_prev_page' => false
+        )
+      end
+    end
+
+    context 'when user does not exist' do
+      it 'returns not found error' do
+        get "/api/v1/users/99999/sleep_records/friends_sleep_feed"
+
+        expect(response).to have_http_status(:not_found)
+        expect(parsed_response_body).to eq(
+          'error' => '使用者不存在',
+          'details' => '找不到 ID 為 99999 的使用者'
+        )
+      end
+    end
+  end
 end

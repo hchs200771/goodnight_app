@@ -7,6 +7,7 @@ module Api
       # 錯誤處理
       rescue_from ActiveRecord::RecordNotFound, with: :not_found
       rescue_from ActiveRecord::RecordInvalid, with: :unprocessable_entity
+      rescue_from ArgumentError, with: :bad_request
 
       private
 
@@ -23,6 +24,13 @@ module Api
           error: '驗證失敗',
           errors: exception.record.errors.full_messages
         }, status: :unprocessable_entity
+      end
+
+      def bad_request(exception)
+        render json: {
+          error: '請求參數錯誤',
+          details: exception.message
+        }, status: :bad_request
       end
     end
   end

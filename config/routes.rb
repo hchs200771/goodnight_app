@@ -17,6 +17,7 @@ Rails.application.routes.draw do
           collection do
             post :clock_in
             patch :wake_up
+            get :friends_sleep_feed
           end
         end
 
