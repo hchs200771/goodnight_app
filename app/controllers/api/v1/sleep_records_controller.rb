@@ -37,6 +37,39 @@ module Api
         end
       end
 
+      # PATCH /api/v1/users/:user_id/sleep_records/wake_up
+      def wake_up
+        # 檢查使用者是否有進行中的睡眠紀錄
+        @current_sleep_record = @user.current_sleep_record
+
+        unless @current_sleep_record
+          render json: {
+            error: '使用者沒有進行中的睡眠紀錄'
+          }, status: :unprocessable_entity
+          return
+        end
+
+        @current_sleep_record.wake_up_time = Time.current
+        if @current_sleep_record.save
+          render json: {
+            message: '起床打卡成功',
+            sleep_record: {
+              id: @current_sleep_record.id,
+              bed_time: @current_sleep_record.bed_time,
+              wake_up_time: @current_sleep_record.wake_up_time,
+              duration_in_seconds: @current_sleep_record.duration_in_seconds,
+              duration_in_hours: @current_sleep_record.duration_in_hours,
+              status: 'completed'
+            }
+          }, status: :ok
+        else
+          render json: {
+            error: '起床打卡失敗',
+            errors: @current_sleep_record.errors.full_messages
+          }, status: :unprocessable_entity
+        end
+      end
+
       private
 
       def set_user

@@ -21,10 +21,7 @@ class SleepRecord < ApplicationRecord
     (duration_in_seconds / 3600.0).round(2)
   end
 
-  def duration_in_minutes
-    return nil unless duration_in_seconds
-    (duration_in_seconds / 60.0).round(2)
-  end
+
 
   private
 
