@@ -49,10 +49,10 @@ class SleepRecord < ApplicationRecord
 
   # 私有方法：參數驗證
   def self.validate_friends_sleep_feed_params(follower_id, start_date, end_date)
-    raise ArgumentError, 'follower_id is required' if follower_id.blank?
-    raise ArgumentError, 'start_date must be a Date/Time' unless start_date.is_a?(Date) || start_date.is_a?(Time)
-    raise ArgumentError, 'end_date must be a Date/Time' unless end_date.is_a?(Date) || end_date.is_a?(Time)
-    raise ArgumentError, 'start_date must be before end_date' if start_date >= end_date
+    raise ArgumentError, "follower_id is required" if follower_id.blank?
+    raise ArgumentError, "start_date must be a Date/Time" unless start_date.is_a?(Date) || start_date.is_a?(Time)
+    raise ArgumentError, "end_date must be a Date/Time" unless end_date.is_a?(Date) || end_date.is_a?(Time)
+    raise ArgumentError, "start_date must be before end_date" if start_date >= end_date
   end
 
   private_class_method :validate_friends_sleep_feed_params
@@ -77,7 +77,7 @@ class SleepRecord < ApplicationRecord
     else
       # wake_up_time <= bed_time 表示時間設定錯誤
       errors.add(:wake_up_time, "起床時間必須晚於上床時間")
-      return false
+      false
     end
   end
 end

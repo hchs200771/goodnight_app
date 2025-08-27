@@ -13,6 +13,6 @@ class CreateFollowRelationships < ActiveRecord::Migration[7.2]
     end
 
     # 防止重複追蹤：同一個人不能追蹤同一個人兩次
-    add_index :follow_relationships, [:follower_id, :followed_id], unique: true, name: 'index_follow_relationships_on_follower_and_followed'
+    add_index :follow_relationships, [ :follower_id, :followed_id ], unique: true, name: 'index_follow_relationships_on_follower_and_followed'
   end
 end

@@ -11,7 +11,7 @@ module Api
         # 檢查使用者是否已經有進行中的睡眠紀錄
         if @user.current_sleep_record.present?
           render json: {
-            error: '使用者已有進行中的睡眠紀錄',
+            error: "使用者已有進行中的睡眠紀錄",
             current_sleep_record: {
               id: @user.current_sleep_record.id,
               bed_time: @user.current_sleep_record.bed_time
@@ -25,16 +25,16 @@ module Api
 
         if @sleep_record.save
           render json: {
-            message: '打卡成功',
+            message: "打卡成功",
             sleep_record: {
               id: @sleep_record.id,
               bed_time: @sleep_record.bed_time,
-              status: 'ongoing'
+              status: "ongoing"
             }
           }, status: :created
         else
           render json: {
-            error: '打卡失敗',
+            error: "打卡失敗",
             errors: @sleep_record.errors.full_messages
           }, status: :unprocessable_entity
         end
@@ -43,7 +43,7 @@ module Api
       # GET /api/v1/users/:user_id/sleep_records
       def index
         page = (params[:page] || 1).to_i
-        per_page = [(params[:per_page] || 20).to_i, 100].min # 限制最大每頁100筆
+        per_page = [ (params[:per_page] || 20).to_i, 100 ].min # 限制最大每頁100筆
 
         with_read_replica do
           @sleep_records = @user.sleep_records.recent.offset((page - 1) * per_page).limit(per_page)
@@ -68,7 +68,7 @@ module Api
               wake_up_time: record.wake_up_time,
               duration_in_seconds: record.duration_in_seconds,
               duration_in_hours: record.duration_in_hours,
-              status: record.ongoing? ? 'ongoing' : 'completed',
+              status: record.ongoing? ? "ongoing" : "completed",
               created_at: record.created_at
             }
           end
@@ -82,7 +82,7 @@ module Api
 
         unless @current_sleep_record
           render json: {
-            error: '使用者沒有進行中的睡眠紀錄'
+            error: "使用者沒有進行中的睡眠紀錄"
           }, status: :unprocessable_entity
           return
         end
@@ -90,19 +90,19 @@ module Api
         @current_sleep_record.wake_up_time = Time.current
         if @current_sleep_record.save
           render json: {
-            message: '起床打卡成功',
+            message: "起床打卡成功",
             sleep_record: {
               id: @current_sleep_record.id,
               bed_time: @current_sleep_record.bed_time,
               wake_up_time: @current_sleep_record.wake_up_time,
               duration_in_seconds: @current_sleep_record.duration_in_seconds,
               duration_in_hours: @current_sleep_record.duration_in_hours,
-              status: 'completed'
+              status: "completed"
             }
           }, status: :ok
         else
           render json: {
-            error: '起床打卡失敗',
+            error: "起床打卡失敗",
             errors: @current_sleep_record.errors.full_messages
           }, status: :unprocessable_entity
         end
@@ -111,7 +111,7 @@ module Api
       # GET /api/v1/users/:user_id/sleep_records/friends_sleep_feed
       def friends_sleep_feed
         page = (params[:page] || 1).to_i
-        per_page = [(params[:per_page] || 20).to_i, 100].min # 限制最大每頁100筆
+        per_page = [ (params[:per_page] || 20).to_i, 100 ].min # 限制最大每頁100筆
 
         # 支援自訂日期範圍，預設為上週
         start_date = params[:start_date]&.to_date || 1.week.ago.beginning_of_week
@@ -185,21 +185,21 @@ module Api
         @user = User.find(params[:user_id])
       rescue ActiveRecord::RecordNotFound
         render json: {
-          error: '使用者不存在',
+          error: "使用者不存在",
           details: "找不到 ID 為 #{params[:user_id]} 的使用者"
         }, status: :not_found
-        return
+        nil
       end
 
       def validate_date_range(start_date, end_date)
         if start_date >= end_date
-          render json: { error: '開始日期必須早於結束日期' }, status: :bad_request
+          render json: { error: "開始日期必須早於結束日期" }, status: :bad_request
           return false
         end
 
         # 限制查詢時間範圍（例如：最多查詢 1 年）
         if (end_date - start_date) > 1.year
-          render json: { error: '查詢時間範圍不能超過 1 年' }, status: :bad_request
+          render json: { error: "查詢時間範圍不能超過 1 年" }, status: :bad_request
           return false
         end
 

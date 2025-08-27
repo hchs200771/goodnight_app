@@ -13,7 +13,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Sleep Records API
       resources :users do
-        resources :sleep_records, only: [:index] do
+        resources :sleep_records, only: [ :index ] do
           collection do
             post :clock_in
             patch :wake_up
@@ -22,7 +22,7 @@ Rails.application.routes.draw do
         end
 
         # Follow Relationships API
-        resources :follow_relationships, only: [:create, :destroy]
+        resources :follow_relationships, only: [ :create, :destroy ]
       end
     end
   end

@@ -313,7 +313,7 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
 
         # 檢查是否包含所有朋友的睡眠紀錄
         records = parsed_response_body['friends_sleep_records']
-        expect(records.map { |r| r['id'] }).to eq([@friend2_record.id, @friend1_record1.id, @friend1_record2.id])
+        expect(records.map { |r| r['id'] }).to eq([ @friend2_record.id, @friend1_record1.id, @friend1_record2.id ])
       end
 
       it 'supports pagination with page 1 and per_page 2' do
@@ -343,7 +343,7 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
         # 第一筆應該是最長睡眠時間（32400 秒）
         # 第二筆應該是第二長睡眠時間（28800 秒）
         durations = records.map { |r| r['duration_in_seconds'] }
-        expect(durations).to eq([32400, 28800])
+        expect(durations).to eq([ 32400, 28800 ])
       end
 
       it 'supports pagination with page 2 and per_page 2' do
@@ -369,7 +369,7 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
 
         # 檢查第二頁的資料（應該是最後 1 筆）
         durations = parsed_response_body['friends_sleep_records'].map { |r| r['duration_in_seconds'] }
-        expect(durations).to eq([25200])
+        expect(durations).to eq([ 25200 ])
       end
 
       it 'handles pagination edge cases correctly' do
@@ -419,7 +419,7 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
         durations = records.map { |r| r['duration_in_seconds'] }
 
         # 檢查具體的排序結果
-        expect(durations).to eq([32400, 28800, 25200])
+        expect(durations).to eq([ 32400, 28800, 25200 ])
       end
 
       it 'excludes non-friend sleep records' do
