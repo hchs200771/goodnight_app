@@ -298,7 +298,3 @@ class ApplicationController < ActionController::API
   end
 end
 ```
-
-## 授權
-
-本專案採用 MIT 授權條款。
