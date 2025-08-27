@@ -59,13 +59,13 @@
 
 ### 睡眠記錄
 
-#### 打卡上班（開始睡眠）
+#### 開始睡眠打卡
 ```http
 POST /api/v1/users/:user_id/sleep_records/clock_in
 ```
 **回應**：使用當前時間戳創建新的睡眠記錄
 
-#### 打卡下班（結束睡眠）
+#### 起床打卡
 ```http
 PATCH /api/v1/users/:user_id/sleep_records/wake_up
 ```
@@ -84,8 +84,8 @@ GET /api/v1/users/:user_id/sleep_records?page=1&per_page=20
 GET /api/v1/users/:user_id/sleep_records/friends_sleep_feed?start_date=2024-01-01&end_date=2024-01-07&page=1&per_page=20
 ```
 **查詢參數**：
-- `start_date`：範圍開始日期（預設：一週前）
-- `end_date`：範圍結束日期（預設：一週前）
+- `start_date`：範圍開始日期（也可以不給，預設：前一週的開始）
+- `end_date`：範圍結束日期（也可以不給，預設：前一週的結束）
 - `page`：頁碼（預設：1）
 - `per_page`：每頁記錄數（預設：20，最大：100）
 
@@ -105,38 +105,6 @@ POST /api/v1/users/:user_id/follow_relationships
 #### 取消關注使用者
 ```http
 DELETE /api/v1/users/:user_id/follow_relationships/:followed_id
-```
-
-## API 回應格式
-
-### 成功回應
-```json
-{
-  "message": "成功訊息",
-  "data": { ... }
-}
-```
-
-### 錯誤回應
-```json
-{
-  "error": "錯誤訊息",
-  "details": "額外錯誤詳情"
-}
-```
-
-### 分頁回應
-```json
-{
-  "pagination": {
-    "current_page": 1,
-    "per_page": 20,
-    "total_count": 100,
-    "total_pages": 5,
-    "has_next_page": true,
-    "has_prev_page": false
-  }
-}
 ```
 
 ## 資料庫結構
@@ -179,15 +147,15 @@ CREATE TABLE follow_relationships (
 ## 開始使用
 
 ### 前置需求
-- Ruby 3.0+
-- Rails 7.0+
+- Ruby 3.1.4
+- Rails 7.2.2.2
 - PostgreSQL
 
 ### 安裝步驟
 
 1. 複製專案
 ```bash
-git clone <repository-url>
+git clone git@github.com:hchs200771/goodnight_app.git
 cd goodnight_app
 ```
 
@@ -200,7 +168,6 @@ bundle install
 ```bash
 rails db:create
 rails db:migrate
-rails db:seed
 ```
 
 4. 啟動伺服器
@@ -211,35 +178,6 @@ rails server
 ### 執行測試
 ```bash
 bundle exec rspec
-```
-
-## 使用範例
-
-### 打卡上班
-```bash
-curl -X POST http://localhost:3000/api/v1/users/1/sleep_records/clock_in
-```
-
-### 打卡下班
-```bash
-curl -X PATCH http://localhost:3000/api/v1/users/1/sleep_records/wake_up
-```
-
-### 關注使用者
-```bash
-curl -X POST http://localhost:3000/api/v1/users/1/follow_relationships \
-  -H "Content-Type: application/json" \
-  -d '{"followed_id": 2}'
-```
-
-### 獲取睡眠記錄
-```bash
-curl http://localhost:3000/api/v1/users/1/sleep_records?page=1&per_page=10
-```
-
-### 獲取朋友睡眠動態
-```bash
-curl "http://localhost:3000/api/v1/users/1/sleep_records/friends_sleep_feed?start_date=2024-01-01&end_date=2024-01-07"
 ```
 
 ## 效能特色
