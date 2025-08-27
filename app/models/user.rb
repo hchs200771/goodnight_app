@@ -28,10 +28,6 @@ class User < ApplicationRecord
     following_relationships.exists?(followed: user)
   end
 
-  def sleep_records_with_duration
-    sleep_records.completed.order(created_at: :desc)
-  end
-
   def current_sleep_record
     sleep_records.ongoing.last
   end

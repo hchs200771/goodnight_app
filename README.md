@@ -28,7 +28,6 @@
   - `follow(user)`：關注另一個使用者
   - `unfollow(user)`：取消關注使用者
   - `following?(user)`：檢查是否關注某使用者
-  - `sleep_records_with_duration`：獲取已完成的睡眠記錄
   - `current_sleep_record`：獲取進行中的睡眠記錄
 
 ### SleepRecord（睡眠記錄）

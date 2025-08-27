@@ -40,20 +40,6 @@ RSpec.describe User, type: :model do
       end
     end
 
-    describe '#sleep_records_with_duration' do
-      let!(:completed_record) { create(:sleep_record, :completed, user: user) }
-      let!(:ongoing_record) { create(:sleep_record, :ongoing, user: user) }
-
-      it 'returns only completed sleep records' do
-        expect(user.sleep_records_with_duration).to include(completed_record)
-        expect(user.sleep_records_with_duration).not_to include(ongoing_record)
-      end
-
-      it 'orders by created_at desc' do
-        expect(user.sleep_records_with_duration.first).to eq(completed_record)
-      end
-    end
-
     describe '#current_sleep_record' do
       let!(:completed_record) { create(:sleep_record, :completed, user: user) }
       let!(:ongoing_record) { create(:sleep_record, :ongoing, user: user) }
