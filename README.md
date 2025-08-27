@@ -129,7 +129,6 @@ CREATE TABLE sleep_records (
   created_at TIMESTAMP NOT NULL,
   updated_at TIMESTAMP NOT NULL
 );
-```
 
 ### Follow Relationships 表
 ```sql
@@ -185,6 +184,57 @@ bundle exec rspec
 - **優化查詢**：高效的資料庫查詢與適當的索引
 - **分頁功能**：內建分頁處理大型資料集
 - **預載入**：使用 `includes` 防止 N+1 查詢問題
+- **複合索引優化**：針對 `friends_sleep_feed` 查詢優化的複合索引
+  - `(user_id, created_at, duration_in_seconds)` - 主要查詢優化
+  - `(duration_in_seconds, created_at)` - 排序優化
+  - `(user_id, created_at)` - 用戶時間範圍查詢優化
+
+## CI/CD 流程
+
+本專案使用 GitHub Actions 進行持續整合和部署，確保代碼質量和穩定性。
+
+### 觸發條件
+- **Pull Request**：每次創建或更新 PR 時觸發
+- **Push to main**：直接推送到主分支時觸發
+
+### 工作流程
+
+#### 1. 安全掃描 (scan_ruby)
+- **工具**：Brakeman
+- **目的**：掃描 Rails 應用程式的安全漏洞
+- **配置**：`--no-exit-on-warn` 防止警告導致 CI 失敗
+- **觸發**：每次 PR 和 push 時執行
+
+#### 2. 代碼品質檢查 (lint)
+- **工具**：RuboCop
+- **目的**：確保代碼風格一致性和品質
+- **輸出格式**：GitHub 格式，便於在 PR 中查看問題
+- **觸發**：每次 PR 和 push 時執行
+
+#### 3. 測試執行 (test)
+- **環境**：Ubuntu 22.04 + PostgreSQL
+- **測試框架**：RSpec
+- **數據庫**：PostgreSQL 測試環境
+- **命令**：`bundle exec rspec`
+- **觸發**：每次 PR 和 push 時執行
+
+### CI 配置檔案
+- **位置**：`.github/workflows/ci.yml`
+- **配置**：自動化測試、安全掃描、代碼品質檢查
+- **狀態徽章**：可在 README 中顯示 CI 狀態
+
+### 本地測試
+在提交代碼前，建議在本地執行以下檢查：
+```bash
+# 運行測試
+bundle exec rspec
+
+# 代碼品質檢查
+bin/rubocop
+
+# 安全掃描
+bin/brakeman
+```
 
 ## 錯誤處理
 
