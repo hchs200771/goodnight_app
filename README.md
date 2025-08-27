@@ -264,3 +264,41 @@ API 包含全面的錯誤處理：
 3. 進行您的更改
 4. 為新功能添加測試
 5. 提交 Pull Request
+
+## 重要備註
+
+### 認證與權限
+**注意：本專案為作業用途，未實作使用者註冊和認證機制**
+
+在實際生產環境中，前後端溝通應該使用：
+- **Devise** 或類似認證框架進行使用者管理
+- **JWT (JSON Web Token)** 進行身份驗證
+- **權限控制** 限制 API 存取權限
+- **資安防護** 防止未授權存取和資料洩露
+
+### 當前實作限制
+- 所有 API 端點都開放存取，無需認證
+- 使用者 ID 直接透過 URL 參數傳遞
+- 未實作使用者註冊、登入、登出功能
+- 缺乏權限驗證和資料隔離
+
+### 建議的生產環境實作
+```ruby
+# 使用 Devise + JWT 的範例
+class ApplicationController < ActionController::API
+  before_action :authenticate_user!
+  before_action :verify_jwt_token
+
+  private
+
+  def verify_jwt_token
+    # JWT 驗證邏輯
+    # 權限檢查
+    # 使用者身份確認
+  end
+end
+```
+
+## 授權
+
+本專案採用 MIT 授權條款。
