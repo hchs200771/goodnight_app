@@ -1,24 +1,266 @@
-# README
+# Goodnight App
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+一個基於 Rails 的睡眠追蹤應用程式，允許使用者追蹤睡眠模式並關注朋友以查看他們的睡眠數據。
 
-Things you may want to cover:
+## 功能特色
 
-* Ruby version
+- **睡眠追蹤**：打卡上下班以追蹤睡眠時長
+- **社交功能**：關注/取消關注其他使用者以查看他們的睡眠模式
+- **睡眠分析**：查看個人睡眠記錄和朋友睡眠動態
+- **RESTful API**：乾淨的 API 設計，具有適當的錯誤處理和分頁功能
 
-* System dependencies
+## 技術架構
 
-* Configuration
+- **後端**：Ruby on Rails 7
+- **資料庫**：PostgreSQL
+- **API**：RESTful JSON API
+- **測試**：RSpec 與 FactoryBot
 
-* Database creation
+## 資料模型
 
-* Database initialization
+### User（使用者）
+- **屬性**：`id`、`name`、`created_at`、`updated_at`
+- **關聯**：
+  - 擁有多個睡眠記錄
+  - 擁有多個關注關係（他們關注的使用者）
+  - 擁有多個粉絲關係（關注他們的使用者）
+- **方法**：
+  - `follow(user)`：關注另一個使用者
+  - `unfollow(user)`：取消關注使用者
+  - `following?(user)`：檢查是否關注某使用者
+  - `sleep_records_with_duration`：獲取已完成的睡眠記錄
+  - `current_sleep_record`：獲取進行中的睡眠記錄
 
-* How to run the test suite
+### SleepRecord（睡眠記錄）
+- **屬性**：`id`、`user_id`、`bed_time`、`wake_up_time`、`duration_in_seconds`、`created_at`、`updated_at`
+- **關聯**：屬於使用者
+- **作用域**：
+  - `completed`：有起床時間的記錄
+  - `ongoing`：沒有起床時間的記錄
+  - `by_duration`：按睡眠時長排序
+  - `recent`：按創建日期排序
+- **方法**：
+  - `duration_in_hours`：將秒數轉換為小時
+  - `ongoing?`：檢查睡眠是否進行中
+- **類方法**：
+  - `friends_sleep_feed`：獲取關注使用者的睡眠記錄
 
-* Services (job queues, cache servers, search engines, etc.)
+### FollowRelationship（關注關係）
+- **屬性**：`id`、`follower_id`、`followed_id`、`created_at`、`updated_at`
+- **關聯**：屬於關注者和被關注者
+- **驗證**：不能關注自己，關注者-被關注者對必須唯一
 
-* Deployment instructions
+## API 端點
 
-* ...
+### 基礎 URL
+```
+/api/v1
+```
+
+### 睡眠記錄
+
+#### 打卡上班（開始睡眠）
+```http
+POST /api/v1/users/:user_id/sleep_records/clock_in
+```
+**回應**：使用當前時間戳創建新的睡眠記錄
+
+#### 打卡下班（結束睡眠）
+```http
+PATCH /api/v1/users/:user_id/sleep_records/wake_up
+```
+**回應**：更新睡眠記錄的起床時間並計算時長
+
+#### 獲取使用者的睡眠記錄
+```http
+GET /api/v1/users/:user_id/sleep_records?page=1&per_page=20
+```
+**查詢參數**：
+- `page`：頁碼（預設：1）
+- `per_page`：每頁記錄數（預設：20，最大：100）
+
+#### 獲取朋友睡眠動態
+```http
+GET /api/v1/users/:user_id/sleep_records/friends_sleep_feed?start_date=2024-01-01&end_date=2024-01-07&page=1&per_page=20
+```
+**查詢參數**：
+- `start_date`：範圍開始日期（預設：一週前）
+- `end_date`：範圍結束日期（預設：一週前）
+- `page`：頁碼（預設：1）
+- `per_page`：每頁記錄數（預設：20，最大：100）
+
+### 關注關係
+
+#### 關注使用者
+```http
+POST /api/v1/users/:user_id/follow_relationships
+```
+**請求體**：
+```json
+{
+  "followed_id": 123
+}
+```
+
+#### 取消關注使用者
+```http
+DELETE /api/v1/users/:user_id/follow_relationships/:followed_id
+```
+
+## API 回應格式
+
+### 成功回應
+```json
+{
+  "message": "成功訊息",
+  "data": { ... }
+}
+```
+
+### 錯誤回應
+```json
+{
+  "error": "錯誤訊息",
+  "details": "額外錯誤詳情"
+}
+```
+
+### 分頁回應
+```json
+{
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 100,
+    "total_pages": 5,
+    "has_next_page": true,
+    "has_prev_page": false
+  }
+}
+```
+
+## 資料庫結構
+
+### Users 表
+```sql
+CREATE TABLE users (
+  id BIGINT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP NOT NULL
+);
+```
+
+### Sleep Records 表
+```sql
+CREATE TABLE sleep_records (
+  id BIGINT PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id),
+  bed_time TIMESTAMP NOT NULL,
+  wake_up_time TIMESTAMP,
+  duration_in_seconds INTEGER,
+  created_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP NOT NULL
+);
+```
+
+### Follow Relationships 表
+```sql
+CREATE TABLE follow_relationships (
+  id BIGINT PRIMARY KEY,
+  follower_id BIGINT NOT NULL REFERENCES users(id),
+  followed_id BIGINT NOT NULL REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP NOT NULL,
+  UNIQUE(follower_id, followed_id)
+);
+```
+
+## 開始使用
+
+### 前置需求
+- Ruby 3.0+
+- Rails 7.0+
+- PostgreSQL
+
+### 安裝步驟
+
+1. 複製專案
+```bash
+git clone <repository-url>
+cd goodnight_app
+```
+
+2. 安裝依賴
+```bash
+bundle install
+```
+
+3. 設定資料庫
+```bash
+rails db:create
+rails db:migrate
+rails db:seed
+```
+
+4. 啟動伺服器
+```bash
+rails server
+```
+
+### 執行測試
+```bash
+bundle exec rspec
+```
+
+## 使用範例
+
+### 打卡上班
+```bash
+curl -X POST http://localhost:3000/api/v1/users/1/sleep_records/clock_in
+```
+
+### 打卡下班
+```bash
+curl -X PATCH http://localhost:3000/api/v1/users/1/sleep_records/wake_up
+```
+
+### 關注使用者
+```bash
+curl -X POST http://localhost:3000/api/v1/users/1/follow_relationships \
+  -H "Content-Type: application/json" \
+  -d '{"followed_id": 2}'
+```
+
+### 獲取睡眠記錄
+```bash
+curl http://localhost:3000/api/v1/users/1/sleep_records?page=1&per_page=10
+```
+
+### 獲取朋友睡眠動態
+```bash
+curl "http://localhost:3000/api/v1/users/1/sleep_records/friends_sleep_feed?start_date=2024-01-01&end_date=2024-01-07"
+```
+
+## 效能特色
+
+- **讀取副本支援**：對讀取密集型操作使用讀取副本
+- **優化查詢**：高效的資料庫查詢與適當的索引
+- **分頁功能**：內建分頁處理大型資料集
+- **預載入**：使用 `includes` 防止 N+1 查詢問題
+
+## 錯誤處理
+
+API 包含全面的錯誤處理：
+- **400 Bad Request**：無效參數或日期範圍
+- **404 Not Found**：使用者或資源不存在
+- **422 Unprocessable Entity**：驗證錯誤或業務邏輯違規
+- **500 Internal Server Error**：伺服器端錯誤
+
+## 貢獻指南
+
+1. Fork 專案
+2. 創建功能分支
+3. 進行您的更改
+4. 為新功能添加測試
+5. 提交 Pull Request
