@@ -21,7 +21,9 @@ class SleepRecord < ApplicationRecord
     (duration_in_seconds / 3600.0).round(2)
   end
 
-
+  def ongoing?
+    wake_up_time.nil?
+  end
 
   private
 

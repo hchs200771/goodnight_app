@@ -1,6 +1,8 @@
 module Api
   module V1
     class SleepRecordsController < ApplicationController
+      include ReadReplica
+
       before_action :set_user
 
       # POST /api/v1/users/:user_id/sleep_records/clock_in
@@ -35,6 +37,41 @@ module Api
             errors: @sleep_record.errors.full_messages
           }, status: :unprocessable_entity
         end
+      end
+
+      # GET /api/v1/users/:user_id/sleep_records
+      def index
+        page = (params[:page] || 1).to_i
+        per_page = [(params[:per_page] || 20).to_i, 100].min # 限制最大每頁100筆
+
+        with_read_replica do
+          @sleep_records = @user.sleep_records.recent.offset((page - 1) * per_page).limit(per_page)
+          @total_count = @user.sleep_records.count
+        end
+
+        render json: {
+          user_id: @user.id,
+          user_name: @user.name,
+          pagination: {
+            current_page: page,
+            per_page: per_page,
+            total_count: @total_count,
+            total_pages: (@total_count.to_f / per_page).ceil,
+            has_next_page: page < (@total_count.to_f / per_page).ceil,
+            has_prev_page: page > 1
+          },
+          sleep_records: @sleep_records.map do |record|
+            {
+              id: record.id,
+              bed_time: record.bed_time,
+              wake_up_time: record.wake_up_time,
+              duration_in_seconds: record.duration_in_seconds,
+              duration_in_hours: record.duration_in_hours,
+              status: record.ongoing? ? 'ongoing' : 'completed',
+              created_at: record.created_at
+            }
+          end
+        }
       end
 
       # PATCH /api/v1/users/:user_id/sleep_records/wake_up

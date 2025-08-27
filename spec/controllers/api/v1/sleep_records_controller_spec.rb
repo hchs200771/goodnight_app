@@ -63,6 +63,136 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
     end
   end
 
+  describe 'GET /api/v1/users/:user_id/sleep_records' do
+    context 'when user exists' do
+      let!(:sleep_record_1) { create(:sleep_record, :completed, user: user, created_at: 2.days.ago) }
+      let!(:sleep_record_2) { create(:sleep_record, :ongoing, user: user, created_at: 1.day.ago) }
+      let!(:sleep_record_3) { create(:sleep_record, :completed, user: user, created_at: Time.current) }
+
+      it 'returns paginated sleep records for the user ordered by created_at desc' do
+        get "/api/v1/users/#{user.id}/sleep_records"
+
+        expect(response).to have_http_status(:ok)
+
+        expect(parsed_response_body).to match(
+          'user_id' => user.id,
+          'user_name' => user.name,
+          'pagination' => {
+            'current_page' => 1,
+            'per_page' => 20,
+            'total_count' => 3,
+            'total_pages' => 1,
+            'has_next_page' => false,
+            'has_prev_page' => false
+          },
+          'sleep_records' => [
+            {
+              'id' => sleep_record_3.id,
+              'bed_time' => be_present,
+              'wake_up_time' => be_present,
+              'duration_in_seconds' => be_present,
+              'duration_in_hours' => be_present,
+              'status' => 'completed',
+              'created_at' => be_present
+            },
+            {
+              'id' => sleep_record_2.id,
+              'bed_time' => be_present,
+              'wake_up_time' => nil,
+              'duration_in_seconds' => nil,
+              'duration_in_hours' => nil,
+              'status' => 'ongoing',
+              'created_at' => be_present
+            },
+            {
+              'id' => sleep_record_1.id,
+              'bed_time' => be_present,
+              'wake_up_time' => be_present,
+              'duration_in_seconds' => be_present,
+              'duration_in_hours' => be_present,
+              'status' => 'completed',
+              'created_at' => be_present
+            }
+          ]
+        )
+      end
+
+      it 'includes correct sleep record details' do
+        get "/api/v1/users/#{user.id}/sleep_records"
+
+        expect(parsed_response_body).to include(
+          'sleep_records' => array_including(
+            hash_including(
+              'id' => sleep_record_2.id,
+              'status' => 'ongoing',
+              'wake_up_time' => nil,
+              'duration_in_seconds' => nil
+            ),
+            hash_including(
+              'id' => sleep_record_1.id,
+              'status' => 'completed',
+              'wake_up_time' => be_present,
+              'duration_in_seconds' => be_present,
+              'duration_in_hours' => be_present
+            )
+          )
+        )
+      end
+
+      it 'handles custom pagination parameters' do
+        get "/api/v1/users/#{user.id}/sleep_records", params: { page: 1, per_page: 2 }
+
+        expect(response).to have_http_status(:ok)
+
+        expect(parsed_response_body).to include(
+          'pagination' => hash_including(
+            'current_page' => 1,
+            'per_page' => 2,
+            'total_count' => 3,
+            'total_pages' => 2,
+            'has_next_page' => true,
+            'has_prev_page' => false
+          ),
+          'sleep_records' => have_attributes(length: 2)
+        )
+      end
+
+      it 'limits per_page to maximum of 100' do
+        get "/api/v1/users/#{user.id}/sleep_records", params: { per_page: 200 }
+
+        expect(response).to have_http_status(:ok)
+
+        expect(parsed_response_body).to include(
+          'pagination' => hash_including('per_page' => 100)
+        )
+      end
+    end
+
+    context 'when user has no sleep records' do
+            it 'returns empty list' do
+        get "/api/v1/users/#{user.id}/sleep_records"
+
+        expect(response).to have_http_status(:ok)
+        expect(parsed_response_body).to include(
+          'sleep_records' => [],
+          'pagination' => hash_including('total_count' => 0)
+        )
+      end
+    end
+
+    context 'when user does not exist' do
+            it 'returns not found error' do
+        get "/api/v1/users/99999/sleep_records"
+
+        expect(response).to have_http_status(:not_found)
+        expect(parsed_response_body).to include(
+          'error' => '使用者不存在',
+          'details' => '找不到 ID 為 99999 的使用者'
+        )
+      end
+    end
+  end
+
   describe 'PATCH /api/v1/users/:user_id/sleep_records/wake_up' do
     context 'when user exists' do
       context 'when user has an ongoing sleep record' do

@@ -13,7 +13,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Sleep Records API
       resources :users do
-        resources :sleep_records, only: [] do
+        resources :sleep_records, only: [:index] do
           collection do
             post :clock_in
             patch :wake_up
