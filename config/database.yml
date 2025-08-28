@@ -19,7 +19,6 @@ default: &default
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
-
 development:
   <<: *default
   database: goodnight_app_development
@@ -72,9 +71,6 @@ test:
 # the values provided in this file. Alternatively, you can specify a connection
 # URL environment variable explicitly:
 #
-#   production:
-#     url: <%= ENV["MY_APP_DATABASE_URL"] %>
-#
 # Read https://guides.rubyonrails.org/configuring.html#configuring-a-database
 # for a full overview on how database connection configuration can be specified.
 #
@@ -83,3 +79,26 @@ production:
   database: goodnight_app_production
   username: goodnight_app
   password: <%= ENV["GOODNIGHT_APP_DATABASE_PASSWORD"] %>
+  host: <%= ENV["GOODNIGHT_APP_DATABASE_HOST"] || "localhost" %>
+  port: <%= ENV["GOODNIGHT_APP_DATABASE_PORT"] || 5432 %>
+
+  # 读取副本配置（仅生产环境）
+  # 主数据库（写操作）
+  primary:
+    <<: *default
+    database: goodnight_app_production
+    username: goodnight_app
+    password: <%= ENV["GOODNIGHT_APP_DATABASE_PASSWORD"] %>
+    host: <%= ENV["GOODNIGHT_APP_DATABASE_HOST"] || "localhost" %>
+    port: <%= ENV["GOODNIGHT_APP_DATABASE_PORT"] || 5432 %>
+
+  # 读取副本（读操作）
+  reading:
+    <<: *default
+    database: goodnight_app_production
+    username: <%= ENV["GOODNIGHT_APP_REPLICA_USERNAME"] || "goodnight_app_readonly" %>
+    password: <%= ENV["GOODNIGHT_APP_REPLICA_PASSWORD"] || ENV["GOODNIGHT_APP_DATABASE_PASSWORD"] %>
+    host: <%= ENV["GOODNIGHT_APP_REPLICA_HOST"] || ENV["GOODNIGHT_APP_DATABASE_HOST"] || "localhost" %>
+    port: <%= ENV["GOODNIGHT_APP_REPLICA_PORT"] || ENV["GOODNIGHT_APP_DATABASE_PORT"] || 5432 %>
+    # 读取副本通常有较小的连接池
+    pool: <%= ENV.fetch("RAILS_REPLICA_MAX_THREADS") { 3 } %>

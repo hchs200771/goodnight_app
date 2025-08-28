@@ -180,7 +180,7 @@ bundle exec rspec
 
 ## 效能特色
 
-- **讀取副本支援**：對讀取密集型操作使用讀取副本
+- **讀取副本支援**：對讀取密集型操作使用讀取分離
 - **優化查詢**：高效的資料庫查詢與適當的索引
 - **分頁功能**：內建分頁處理大型資料集
 - **預載入**：使用 `includes` 防止 N+1 查詢問題
@@ -188,6 +188,47 @@ bundle exec rspec
   - `(user_id, created_at, duration_in_seconds)` - 主要查詢優化
   - `(duration_in_seconds, created_at)` - 排序優化
   - `(user_id, created_at)` - 用戶時間範圍查詢優化
+
+### 讀取副本配置
+
+本專案支援讀取副本（Read Replica）以提升讀取效能。在生產環境中，讀取操作會自動路由到讀取副本。
+
+#### 環境變數配置
+```bash
+# 主數據庫配置
+GOODNIGHT_APP_DATABASE_HOST=localhost
+GOODNIGHT_APP_DATABASE_PORT=5432
+GOODNIGHT_APP_DATABASE_PASSWORD=your_database_password
+
+# 讀取副本配置（可選）
+GOODNIGHT_APP_REPLICA_HOST=replica.example.com
+GOODNIGHT_APP_REPLICA_PORT=5432
+GOODNIGHT_APP_REPLICA_USERNAME=goodnight_app_readonly
+GOODNIGHT_APP_REPLICA_PASSWORD=your_replica_password
+
+# 連接池配置
+RAILS_MAX_THREADS=5
+RAILS_REPLICA_MAX_THREADS=3
+```
+
+#### 使用方法
+在 Controller 中使用 `ReadReplica` concern：
+```ruby
+class SleepRecordsController < ApplicationController
+  include ReadReplica
+
+  def index
+    with_read_replica do
+      @sleep_records = SleepRecord.all
+    end
+  end
+end
+```
+
+#### 自動回退機制
+- 如果讀取副本連接失敗，會自動回退到主數據庫
+- 在開發和測試環境中，如果未配置讀取副本，會使用默認連接
+- 包含完整的錯誤處理和日誌記錄
 
 ## CI/CD 流程
 
