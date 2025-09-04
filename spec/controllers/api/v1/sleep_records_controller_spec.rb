@@ -12,18 +12,18 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
           }.to change { user.sleep_records.count }.by(1)
         end
 
-        it 'sets bed_time to current time and returns the created sleep record' do
+        it 'creates a new sleep record and returns the created sleep record' do
           travel_to Time.current do
             post "/api/v1/users/#{user.id}/sleep_records/clock_in"
 
             expect(response).to have_http_status(:created)
             sleep_record = user.sleep_records.last
-            expect(sleep_record.bed_time).to be_within(1.second).of(Time.current)
+            expect(sleep_record.created_at).to be_within(1.second).of(Time.current)
             expect(sleep_record.wake_up_time).to be_nil
 
             expect(parsed_response_body['message']).to eq('打卡成功')
             expect(parsed_response_body['sleep_record']).to include(
-              'bed_time' => user.sleep_records.last.bed_time.as_json,
+              'created_at' => user.sleep_records.last.created_at.as_json,
               'status' => 'ongoing'
             )
           end
@@ -46,7 +46,7 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
           expect(parsed_response_body['error']).to eq('使用者已有進行中的睡眠紀錄')
           expect(parsed_response_body['current_sleep_record']).to include(
             'id' => ongoing_record.id,
-            'bed_time' => ongoing_record.bed_time.as_json
+            'created_at' => ongoing_record.created_at.as_json
           )
         end
       end
@@ -88,30 +88,27 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
           'sleep_records' => [
             {
               'id' => sleep_record_3.id,
-              'bed_time' => be_present,
+              'created_at' => be_present,
               'wake_up_time' => be_present,
               'duration_in_seconds' => be_present,
               'duration_in_hours' => be_present,
-              'status' => 'completed',
-              'created_at' => be_present
+              'status' => 'completed'
             },
             {
               'id' => sleep_record_2.id,
-              'bed_time' => be_present,
+              'created_at' => be_present,
               'wake_up_time' => nil,
               'duration_in_seconds' => nil,
               'duration_in_hours' => nil,
-              'status' => 'ongoing',
-              'created_at' => be_present
+              'status' => 'ongoing'
             },
             {
               'id' => sleep_record_1.id,
-              'bed_time' => be_present,
+              'created_at' => be_present,
               'wake_up_time' => be_present,
               'duration_in_seconds' => be_present,
               'duration_in_hours' => be_present,
-              'status' => 'completed',
-              'created_at' => be_present
+              'status' => 'completed'
             }
           ]
         )
@@ -217,7 +214,7 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
 
             response_body = parsed_response_body['sleep_record']
             expect(response_body['id']).to eq(ongoing_record.id)
-            expect(response_body['bed_time']).to eq(ongoing_record.bed_time.as_json)
+            expect(response_body['created_at']).to eq(ongoing_record.created_at.as_json)
             expect(response_body['wake_up_time']).to be_present
             expect(response_body['duration_in_seconds']).to be_present
             expect(response_body['duration_in_hours']).to be_present
@@ -260,19 +257,19 @@ RSpec.describe Api::V1::SleepRecordsController, type: :request do
       # 建立上週的睡眠紀錄
       travel_to(1.week.ago + 1.day) do
         # 使用 build + save 來避免回調覆蓋 duration_in_seconds
-        @friend2_record = build(:sleep_record, user: friend2, bed_time: 9.hours.ago, wake_up_time: Time.current)
+        @friend2_record = build(:sleep_record, user: friend2, wake_up_time: Time.current, created_at: 9.hours.ago)
         @friend2_record.duration_in_seconds = 32400 # 9小時
         @friend2_record.save!
 
-        @friend1_record1 = build(:sleep_record, user: friend1, bed_time: 8.hours.ago, wake_up_time: Time.current)
+        @friend1_record1 = build(:sleep_record, user: friend1, wake_up_time: Time.current, created_at: 8.hours.ago)
         @friend1_record1.duration_in_seconds = 28800 # 8小時
         @friend1_record1.save!
 
-        @friend1_record2 = build(:sleep_record, user: friend1, bed_time: 7.hours.ago, wake_up_time: Time.current)
+        @friend1_record2 = build(:sleep_record, user: friend1, wake_up_time: Time.current, created_at: 7.hours.ago)
         @friend1_record2.duration_in_seconds = 25200 # 7小時
         @friend1_record2.save!
 
-        @non_friend_record = build(:sleep_record, user: non_friend, bed_time: 10.hours.ago, wake_up_time: Time.current)
+        @non_friend_record = build(:sleep_record, user: non_friend, wake_up_time: Time.current, created_at: 10.hours.ago)
         @non_friend_record.duration_in_seconds = 36000 # 10小時
         @non_friend_record.save!
       end

@@ -14,21 +14,21 @@ module Api
             error: "使用者已有進行中的睡眠紀錄",
             current_sleep_record: {
               id: @user.current_sleep_record.id,
-              bed_time: @user.current_sleep_record.bed_time
+              created_at: @user.current_sleep_record.created_at
             }
           }, status: :unprocessable_entity
           return
         end
 
         # 建立新的睡眠紀錄
-        @sleep_record = @user.sleep_records.build(bed_time: Time.current)
+        @sleep_record = @user.sleep_records.build
 
         if @sleep_record.save
           render json: {
             message: "打卡成功",
             sleep_record: {
               id: @sleep_record.id,
-              bed_time: @sleep_record.bed_time,
+              created_at: @sleep_record.created_at,
               status: "ongoing"
             }
           }, status: :created
@@ -64,7 +64,6 @@ module Api
           sleep_records: @sleep_records.map do |record|
             {
               id: record.id,
-              bed_time: record.bed_time,
               wake_up_time: record.wake_up_time,
               duration_in_seconds: record.duration_in_seconds,
               duration_in_hours: record.duration_in_hours,
@@ -93,7 +92,7 @@ module Api
             message: "起床打卡成功",
             sleep_record: {
               id: @current_sleep_record.id,
-              bed_time: @current_sleep_record.bed_time,
+              created_at: @current_sleep_record.created_at,
               wake_up_time: @current_sleep_record.wake_up_time,
               duration_in_seconds: @current_sleep_record.duration_in_seconds,
               duration_in_hours: @current_sleep_record.duration_in_hours,
@@ -116,6 +115,21 @@ module Api
         # 支援自訂日期範圍，預設為上週
         start_date = params[:start_date]&.to_date || 1.week.ago.beginning_of_week
         end_date = params[:end_date]&.to_date || 1.week.ago.end_of_week
+
+        key = "#{@user.id}-#{start_date}-#{end_date}-#{page}-#{per_page}"
+        @friends_sleep_records = Rails.cache.fetch(key, expires_in: 5.minutes) do
+          with_read_replica do
+            SleepRecord.friends_sleep_feed(
+              follower_id: @user.id,
+              start_date: start_date,
+              end_date: end_date,
+              page: page,
+              per_page: per_page
+            )
+          end
+
+          @friends_sleep_records
+        end
 
         # 驗證日期範圍
         unless validate_date_range(start_date, end_date)
@@ -169,7 +183,6 @@ module Api
                 id: record.user_id,
                 name: record.user.name
               },
-              bed_time: record.bed_time,
               wake_up_time: record.wake_up_time,
               duration_in_seconds: record.duration_in_seconds,
               duration_in_hours: record.duration_in_hours,

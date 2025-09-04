@@ -31,7 +31,7 @@
   - `current_sleep_record`：獲取進行中的睡眠記錄
 
 ### SleepRecord（睡眠記錄）
-- **屬性**：`id`、`user_id`、`bed_time`、`wake_up_time`、`duration_in_seconds`、`created_at`、`updated_at`
+- **屬性**：`id`、`user_id`、`wake_up_time`、`duration_in_seconds`、`created_at`、`updated_at`
 - **關聯**：屬於使用者
 - **作用域**：
   - `completed`：有起床時間的記錄
@@ -123,7 +123,6 @@ CREATE TABLE users (
 CREATE TABLE sleep_records (
   id BIGINT PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id),
-  bed_time TIMESTAMP NOT NULL,
   wake_up_time TIMESTAMP,
   duration_in_seconds INTEGER,
   created_at TIMESTAMP NOT NULL,

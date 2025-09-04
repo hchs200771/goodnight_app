@@ -3,7 +3,6 @@ class SleepRecord < ApplicationRecord
   belongs_to :user
 
   # Validations
-  validates :bed_time, presence: true
   validates :duration_in_seconds, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
 
   # Callbacks
@@ -71,6 +70,10 @@ class SleepRecord < ApplicationRecord
 
   def calculate_duration
     return unless wake_up_time
+
+    # 使用 created_at 作為上床時間來計算睡眠時長
+    # 如果 created_at 為 nil（測試環境），使用當前時間
+    bed_time = created_at || Time.current
 
     if wake_up_time > bed_time
       self.duration_in_seconds = (wake_up_time - bed_time).to_i
